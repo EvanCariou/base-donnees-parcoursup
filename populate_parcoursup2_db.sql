@@ -154,6 +154,9 @@ INSERT INTO _academie (academie_nom)
 SELECT DISTINCT academie_nom
 FROM import_data;
 
+-- etablissement_statut dans _etablissement est trop petit pour les données réelles
+ALTER TABLE _etablissement ALTER COLUMN etablissement_statut TYPE VARCHAR(50);
+
 -- Etablissements (avec l'académie, comme dans ta table _etablissement)
 INSERT INTO _etablissement (etablissement_code_uai, etablissement_nom, etablissement_statut, academie_nom)
 SELECT DISTINCT etablissement_code_uai, etablissement_nom, etablissement_statut, academie_nom
