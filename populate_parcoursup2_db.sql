@@ -1,7 +1,15 @@
--- Peuplement de la base parcoursup
-SET search_path TO parcoursup;
+-- =====================================================================
+-- SAE 2.04 - Partie 2 : Peuplement de la base parcoursup2
+-- =====================================================================
+-- A executer APRES create_parcoursup2_db.sql, avec SQLWorkbench/J.
+-- Principe : on charge tout le CSV dans une table tampon (import_data),
+-- puis on remplit les tables dans l'ordre des cles etrangeres, et enfin
+-- on supprime la table tampon.
 
--- TABLE TEMPORAIRE : on y charge toutes les données du CSV
+SET search_path TO parcoursup2;
+
+
+-- TABLE TEMPORAIRE : on y charge toutes les donnees du CSV
 
 DROP TABLE IF EXISTS import_data;
 CREATE TABLE import_data(
@@ -49,14 +57,18 @@ CREATE TABLE import_data(
 );
 
 
--- Import des données du CSV dans la table temporaire
+-- Import des donnees du CSV dans la table temporaire
+-- -schema=parcoursup2     : la table import_data est dans le schema parcoursup2
+-- -emptyStringIsNull=true : une case vide devient NULL (utile pour regroupement / concours / url)
 WbImport -file=./fr-esr-parcoursup_2022.csv
          -header=true
          -delimiter=';'
          -quoteChar='"'
          -table=import_data
-         -schema=parcoursup
+         -schema=parcoursup2
          -mode=insert
+         -emptyStringIsNull=true
+         -multiLine=true
          -filecolumns=session_annee, etablissement_statut, etablissement_code_uai, etablissement_nom,
                       departement_code, departement_nom, region_nom, academie_nom, commune_nom,
                       filiere_libelle, selectivite, filiere_libelle_tres_abrege, filiere_libelle_detaille,
@@ -95,14 +107,14 @@ WbImport -file=./fr-esr-parcoursup_2022.csv
                       effectif_admis_neo_bac_avec_mention_bac_techno,
                       effectif_admis_neo_bac_avec_mention_bac_pro,
                       effectif_admis_meme_etablissement, effectif_admises_meme_etablissement,
-                      effectif_admis_meme_academie, effectif_admis_meme_academis_pcv,
+                      effectif_admis_meme_academie, effectif_admis_meme_academie_pcv,
                       pourcent_proposition_admis_ouverture_procedure_principale, pourcent_proposition_avant_bac,
                       pourcent_proposition_admis_avant_fin_procedure_principale, pourcent_admises,
                       pourcent_neo_bac_admis_meme_academie, pourcent_neo_bac_admis_meme_academie_pcv,
                       pourcent_neo_bac_admis_meme_etablissement_bts_cpge, pourcent_neo_bac_admis_boursiers,
                       pourcent_neo_bac, pourcent_neo_bac_mention_sans_info, pourcent_neo_bac_mention_sans,
                       pourcent_neo_bac_mention_assez_bien, pourcent_neo_bac_mention_bien,
-                      pourcent_neo_bac_mention_très_bien, pourcent_neo_bac_mention_très_bien_felicitations,
+                      pourcent_neo_bac_mention_tres_bien, pourcent_neo_bac_mention_tres_bien_felicitations,
                       pourcent_neo_bac_general, pourcent_neo_bac_general_avec_mention, pourcent_neo_bac_techno,
                       pourcent_neo_bac_techno_avec_mention, pourcent_neo_bac_pro, pourcent_neo_bac_pro_avec_mention,
                       effectif_candidats_terminale_generale_avec_proposition_admis,
@@ -142,38 +154,49 @@ WbImport -file=./fr-esr-parcoursup_2022.csv
                       list_com, tri, cod_aff_form, concours_communs_banque_epreuve, url_formation;
 
 
--- Peuplement des tables de référence (pas de clés étrangères)
+-- Tables sans clé étrangères
 
--- Régions
+-- Regions
 INSERT INTO _region (region_nom)
 SELECT DISTINCT region_nom
 FROM import_data;
 
--- Académies
+-- Academies
 INSERT INTO _academie (academie_nom)
 SELECT DISTINCT academie_nom
 FROM import_data;
 
--- etablissement_statut dans _etablissement est trop petit pour les données réelles
-ALTER TABLE _etablissement ALTER COLUMN etablissement_statut TYPE VARCHAR(50);
-
--- Etablissements (avec l'académie, comme dans ta table _etablissement)
-INSERT INTO _etablissement (etablissement_code_uai, etablissement_nom, etablissement_statut, academie_nom)
-SELECT DISTINCT etablissement_code_uai, etablissement_nom, etablissement_statut, academie_nom
+-- Etablissements (le schema officiel ne stocke PAS l'academie ici)
+INSERT INTO _etablissement (etablissement_code_uai, etablissement_nom, etablissement_statut)
+SELECT DISTINCT etablissement_code_uai, etablissement_nom, etablissement_statut
 FROM import_data;
 
--- Les tailles VARCHAR de _filiere dans Partie 1 sont trop petites pour les données réelles
-ALTER TABLE _filiere ALTER COLUMN filiere_libelle TYPE VARCHAR(300);
-ALTER TABLE _filiere ALTER COLUMN filiere_libelle_abrege TYPE VARCHAR(100);
-
--- Filières (le filiere_id est généré automatiquement par SERIAL)
+-- Filieres (le filiere_id est genere automatiquement par SERIAL)
 INSERT INTO _filiere (filiere_libelle, filiere_libelle_tres_abrege, filiere_libelle_abrege, filiere_libelle_detaille_bis)
 SELECT DISTINCT filiere_libelle, filiere_libelle_tres_abrege, filiere_libelle_abrege, filiere_libelle_detaille_bis
 FROM import_data;
 
+-- Session : le create officiel ne la remplit pas, on le fait ici
+INSERT INTO _session (session_annee)
+SELECT DISTINCT session_annee
+FROM import_data;
+
+-- Valeur de la partie 1
+INSERT INTO _type_bac (type_bac) VALUES
+    ('Bac général'),
+    ('Bac technologique'),
+    ('Bac professionnel'),
+    ('Autres');
+
+INSERT INTO _mention_bac (libelle_mention) VALUES
+    ('Sans information'),
+    ('Sans mention'),
+    ('Assez bien'),
+    ('Bien'),
+    ('Très bien'),
+    ('Très bien avec félicitations du jury');
+
 -- Regroupements
--- On réunit les 3 colonnes de regroupement en une seule liste de valeurs uniques
--- UNION (sans ALL) supprime automatiquement les doublons
 INSERT INTO _regroupement (libelle_regroupement)
 SELECT DISTINCT regroupement_1 FROM import_data WHERE regroupement_1 IS NOT NULL
 UNION
@@ -182,70 +205,67 @@ UNION
 SELECT DISTINCT regroupement_3 FROM import_data WHERE regroupement_3 IS NOT NULL;
 
 
--- Peuplement des tables avec clés étrangères
+-- Table avec cle etrangeres
 
--- Départements (clé étrangère vers _region)
+-- Departements (cle etrangere vers _region)
 INSERT INTO _departement (departement_code, departement_nom, region_nom)
 SELECT DISTINCT departement_code, departement_nom, region_nom
 FROM import_data;
 
--- Communes (clé étrangère vers _departement)
+-- Communes (cle etrangere vers _departement)
 INSERT INTO _commune (commune_nom, departement_code)
 SELECT DISTINCT commune_nom, departement_code
 FROM import_data;
 
-
--- Tailles VARCHAR de _formation trop petites pour les données réelles
-ALTER TABLE _formation ALTER COLUMN filiere_libelle_detaille TYPE VARCHAR(400);
-ALTER TABLE _formation ALTER COLUMN tri TYPE VARCHAR(25);
-
--- Peuplement de _formation (on récupère le filiere_id avec un INNER JOIN)
+-- Formation : on recupere le filiere_id avec un INNER JOIN sur les 4 libelles.
+-- Attention : academie_nom est NOT NULL ici, et la colonne s'appelle
+-- concours_communs_banques_epreuves (au pluriel) dans le schema officiel.
 INSERT INTO _formation (
     cod_aff_form,
     filiere_libelle_detaille,
     coordonnees_gps,
     list_com,
-    concours_communs_banque_epreuve,
+    concours_communs_banques_epreuves,
     url_formation,
     tri,
     filiere_id,
     etablissement_code_uai,
     commune_nom,
-    departement_code
+    departement_code,
+    academie_nom
 )
 SELECT DISTINCT
-    cod_aff_form,
-    filiere_libelle_detaille,
-    coordonnees_gps,
-    list_com,
-    concours_communs_banque_epreuve,
-    url_formation,
-    tri,
-    filiere_id,
-    etablissement_code_uai,
-    commune_nom,
-    departement_code
+    i.cod_aff_form,
+    i.filiere_libelle_detaille,
+    i.coordonnees_gps,
+    i.list_com,
+    i.concours_communs_banque_epreuve,
+    i.url_formation,
+    i.tri,
+    f.filiere_id,
+    i.etablissement_code_uai,
+    i.commune_nom,
+    i.departement_code,
+    i.academie_nom
+
 FROM import_data i
-    INNER JOIN _filiere f ON f.filiere_libelle             = i.filiere_libelle
-                         AND f.filiere_libelle_tres_abrege = i.filiere_libelle_tres_abrege
-                         AND f.filiere_libelle_abrege      = i.filiere_libelle_abrege
-                         AND f.filiere_libelle_detaille_bis = i.filiere_libelle_detaille_bis;
+INNER JOIN _filiere f 
+    ON f.filiere_libelle = i.filiere_libelle
+    AND f.filiere_libelle_tres_abrege  = i.filiere_libelle_tres_abrege
+    AND f.filiere_libelle_abrege       = i.filiere_libelle_abrege
+    AND f.filiere_libelle_detaille_bis = i.filiere_libelle_detaille_bis;
 
 
--- Peuplement des tables de données
--- _type_bac, _mention_bac et _session sont déjà peuplées dans le fichier de création
 
--- Admissions généralités
+
+-- Admissions generalites
 INSERT INTO _admissions_generalites (cod_aff_form, session_annee, selectivite, capacite,
                                      effectif_total_candidats, effectif_total_candidates)
 SELECT cod_aff_form, session_annee, selectivite, capacite,
        effectif_total_candidats, effectif_total_candidates
 FROM import_data;
 
-
 -- Admissions selon le type de bac
--- Une ligne du CSV contient 4 colonnes (une par type de bac)
--- On transforme ces 4 colonnes en 4 lignes avec UNION ALL
 INSERT INTO _admissions_selon_type_neo_bac (cod_aff_form, session_annee, type_bac, effectif_candidat_neo_bac_classes)
 SELECT cod_aff_form, session_annee, 'Bac général',       effectif_candidat_neo_bac_classes_type_general FROM import_data
 UNION ALL
@@ -255,12 +275,9 @@ SELECT cod_aff_form, session_annee, 'Bac professionnel', effectif_candidat_neo_b
 UNION ALL
 SELECT cod_aff_form, session_annee, 'Autres',            effectif_candidat_classes_type_autres          FROM import_data;
 
-
 -- Effectif selon la mention au bac
--- Même principe : 6 colonnes du CSV → 6 lignes avec UNION ALL
 INSERT INTO _effectif_selon_mention (cod_aff_form, session_annee, libelle_mention, effectif_admis_neo_bac_selon_mention)
-
-SELECT cod_aff_form, session_annee, 'Sans information', effectif_admis_neo_bac_selon_mention_sans_info     
+SELECT cod_aff_form, session_annee, 'Sans information',effectif_admis_neo_bac_selon_mention_sans_info     
 FROM import_data
 
 UNION ALL
@@ -270,12 +287,12 @@ FROM import_data
 
 UNION ALL
 
-SELECT cod_aff_form, session_annee, 'Assez bien',effectif_admis_neo_bac_selon_mention_assez_bien    
+SELECT cod_aff_form, session_annee, 'Assez bien', effectif_admis_neo_bac_selon_mention_assez_bien 
 FROM import_data
 
 UNION ALL
 
-SELECT cod_aff_form, session_annee, 'Bien', effectif_admis_neo_bac_selon_mention_bien          
+SELECT cod_aff_form, session_annee, 'Bien', effectif_admis_neo_bac_selon_mention_bien 
 FROM import_data
 
 UNION ALL
@@ -288,11 +305,8 @@ UNION ALL
 SELECT cod_aff_form, session_annee, 'Très bien avec félicitations du jury', effectif_admis_neo_bac_selon_mention_tres_bien_fel 
 FROM import_data;
 
-
--- Rang du dernier appelé selon le regroupement
--- On filtre les lignes où regroupement et rang sont NULL
+-- Rang du dernier appele selon le regroupement
 INSERT INTO _rang_dernier_appele_selon_regroupement (cod_aff_form, session_annee, libelle_regroupement, rang_dernier_appele)
-
 SELECT cod_aff_form, session_annee, regroupement_1, rang_dernier_appele_groupe1
 FROM import_data
 WHERE regroupement_1 IS NOT NULL AND rang_dernier_appele_groupe1 IS NOT NULL
@@ -310,6 +324,7 @@ FROM import_data
 WHERE regroupement_3 IS NOT NULL AND rang_dernier_appele_groupe3 IS NOT NULL;
 
 
-
+-- Suppression de la table tampon
+DROP TABLE import_data;
 
 COMMIT;
