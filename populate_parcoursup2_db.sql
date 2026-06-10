@@ -1,7 +1,3 @@
--- Creation du fichier de peuplement de la base de données.
--- Evan Cariou et Eloi Cossec en 1B2
-
-
 -- Peuplement de la base parcoursup
 SET search_path TO parcoursup;
 
@@ -18,11 +14,11 @@ CREATE TABLE import_data(
     region_nom                                           varchar(50)   NOT NULL,
     academie_nom                                         varchar(50)   NOT NULL,
     commune_nom                                          varchar(100)  NOT NULL,
-    filiere_libelle                                      varchar(100)  NOT NULL,
+    filiere_libelle                                      varchar(300)  NOT NULL,
     selectivite                                          varchar(40)   NOT NULL,
     filiere_libelle_tres_abrege                          varchar(20)   NOT NULL,
-    filiere_libelle_detaille                             varchar(300)  NOT NULL,
-    filiere_libelle_abrege                               varchar(50)   NOT NULL,
+    filiere_libelle_detaille                             varchar(400)  NOT NULL,
+    filiere_libelle_abrege                               varchar(100)  NOT NULL,
     filiere_libelle_detaille_bis                         varchar(200)  NOT NULL,
     filiere_libelle_tres_detaille                        varchar(400),
     coordonnees_gps                                      varchar(30)   NOT NULL,
@@ -163,6 +159,10 @@ INSERT INTO _etablissement (etablissement_code_uai, etablissement_nom, etablisse
 SELECT DISTINCT etablissement_code_uai, etablissement_nom, etablissement_statut, academie_nom
 FROM import_data;
 
+-- Les tailles VARCHAR de _filiere dans Partie 1 sont trop petites pour les données réelles
+ALTER TABLE _filiere ALTER COLUMN filiere_libelle TYPE VARCHAR(300);
+ALTER TABLE _filiere ALTER COLUMN filiere_libelle_abrege TYPE VARCHAR(100);
+
 -- Filières (le filiere_id est généré automatiquement par SERIAL)
 INSERT INTO _filiere (filiere_libelle, filiere_libelle_tres_abrege, filiere_libelle_abrege, filiere_libelle_detaille_bis)
 SELECT DISTINCT filiere_libelle, filiere_libelle_tres_abrege, filiere_libelle_abrege, filiere_libelle_detaille_bis
@@ -192,6 +192,9 @@ SELECT DISTINCT commune_nom, departement_code
 FROM import_data;
 
 
+-- La taille VARCHAR de filiere_libelle_detaille dans _formation est trop petite
+ALTER TABLE _formation ALTER COLUMN filiere_libelle_detaille TYPE VARCHAR(400);
+
 -- Peuplement de _formation (on récupère le filiere_id avec un INNER JOIN)
 INSERT INTO _formation (
     cod_aff_form,
@@ -206,15 +209,23 @@ INSERT INTO _formation (
     commune_nom,
     departement_code
 )
-SELECT DISTINCT cod_aff_form, filiere_libelle_detaille, coordonnees_gps, list_com,
-                concours_communs_banque_epreuve, url_formation, tri, filiere_id,
-                etablissement_code_uai, commune_nom, departement_code
+SELECT DISTINCT
+    cod_aff_form,
+    filiere_libelle_detaille,
+    coordonnees_gps,
+    list_com,
+    concours_communs_banque_epreuve,
+    url_formation,
+    tri,
+    filiere_id,
+    etablissement_code_uai,
+    commune_nom,
+    departement_code
 FROM import_data i
-    INNER JOIN _filiere f 
-    ON f.filiere_libelle = i.filiere_libelle
-    AND f.filiere_libelle_tres_abrege = i.filiere_libelle_tres_abrege
-    AND f.filiere_libelle_abrege      = i.filiere_libelle_abrege
-    AND f.filiere_libelle_detaille_bis = i.filiere_libelle_detaille_bis;
+    INNER JOIN _filiere f ON f.filiere_libelle             = i.filiere_libelle
+                         AND f.filiere_libelle_tres_abrege = i.filiere_libelle_tres_abrege
+                         AND f.filiere_libelle_abrege      = i.filiere_libelle_abrege
+                         AND f.filiere_libelle_detaille_bis = i.filiere_libelle_detaille_bis;
 
 
 -- Peuplement des tables de données
@@ -223,7 +234,6 @@ FROM import_data i
 -- Admissions généralités
 INSERT INTO _admissions_generalites (cod_aff_form, session_annee, selectivite, capacite,
                                      effectif_total_candidats, effectif_total_candidates)
-
 SELECT cod_aff_form, session_annee, selectivite, capacite,
        effectif_total_candidats, effectif_total_candidates
 FROM import_data;
@@ -296,7 +306,6 @@ FROM import_data
 WHERE regroupement_3 IS NOT NULL AND rang_dernier_appele_groupe3 IS NOT NULL;
 
 
--- Suppression de la table temporaire
-DROP TABLE import_data;
+
 
 COMMIT;
