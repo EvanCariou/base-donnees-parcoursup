@@ -42,7 +42,7 @@ CREATE TABLE import_data(
     regroupement_3                                       varchar(100),
     rang_dernier_appele_groupe3                          integer,
     list_com                                             varchar(50)   NOT NULL,
-    tri                                                  varchar(10)   NOT NULL,
+    tri                                                  varchar(25)   NOT NULL,
     cod_aff_form                                         varchar(20)   NOT NULL,
     concours_communs_banque_epreuve                      varchar(200),
     url_formation                                        varchar(200)
@@ -192,8 +192,9 @@ SELECT DISTINCT commune_nom, departement_code
 FROM import_data;
 
 
--- La taille VARCHAR de filiere_libelle_detaille dans _formation est trop petite
+-- Tailles VARCHAR de _formation trop petites pour les données réelles
 ALTER TABLE _formation ALTER COLUMN filiere_libelle_detaille TYPE VARCHAR(400);
+ALTER TABLE _formation ALTER COLUMN tri TYPE VARCHAR(25);
 
 -- Peuplement de _formation (on récupère le filiere_id avec un INNER JOIN)
 INSERT INTO _formation (
