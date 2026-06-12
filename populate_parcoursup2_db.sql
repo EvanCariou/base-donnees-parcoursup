@@ -1,10 +1,6 @@
--- =====================================================================
+-- Evan Cariou et Eloi Cossec 1B2
 -- SAE 2.04 - Partie 2 : Peuplement de la base parcoursup2
--- =====================================================================
--- A executer APRES create_parcoursup2_db.sql, avec SQLWorkbench/J.
--- Principe : on charge tout le CSV dans une table tampon (import_data),
--- puis on remplit les tables dans l'ordre des cles etrangeres, et enfin
--- on supprime la table tampon.
+
 
 SET search_path TO parcoursup2;
 
@@ -58,8 +54,7 @@ CREATE TABLE import_data(
 
 
 -- Import des donnees du CSV dans la table temporaire
--- -schema=parcoursup2     : la table import_data est dans le schema parcoursup2
--- -emptyStringIsNull=true : une case vide devient NULL (utile pour regroupement / concours / url)
+
 WbImport -file=./fr-esr-parcoursup_2022.csv
          -header=true
          -delimiter=';'
@@ -218,8 +213,7 @@ SELECT DISTINCT commune_nom, departement_code
 FROM import_data;
 
 -- Formation : on recupere le filiere_id avec un INNER JOIN sur les 4 libelles.
--- Attention : academie_nom est NOT NULL ici, et la colonne s'appelle
--- concours_communs_banques_epreuves (au pluriel) dans le schema officiel.
+
 INSERT INTO _formation (
     cod_aff_form,
     filiere_libelle_detaille,
