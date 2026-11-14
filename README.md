@@ -29,6 +29,12 @@ Le diagramme de classes UML du modèle :
 | `proprietes.txt` | Liste des attributs à utiliser dans la base |
 | `ParcourSup_simple.jpg` | Diagramme UML |
 
+## Analyse statistique (partie 3)
+
+À partir de la base, j'ai extrait les formations des Côtes-d'Armor (vue SQL `vue_sae`), puis analysé les données en Python : moyennes, variances, boîtes à moustaches, nuages de points et régression linéaire multiple. Le modèle explique environ 93 % de la variation du nombre de candidats.
+
+Tout est dans le dossier [`analyse/`](analyse/), avec son propre [README](analyse/README.md).
+
 ## Utilisation
 
 Prérequis : PostgreSQL et [SQL Workbench/J](https://www.sql-workbench.eu/) (le script de remplissage utilise sa commande `WbImport`).
