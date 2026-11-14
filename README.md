@@ -2,7 +2,7 @@
 
 Projet réalisé en binôme pendant la première année de BUT Informatique à l'IUT de Lannion (2025-2026).
 
-L'objectif : construire une base de données PostgreSQL à partir des données ouvertes Parcoursup de la session 2022 (jeu de données `fr-esr-parcoursup`, publié par le ministère de l'Enseignement supérieur). Le fichier CSV d'origine est une seule grande table. On la découpe en plusieurs tables liées entre elles.
+L'objectif en deux parties : (1) construire une base de données PostgreSQL à partir des données ouvertes Parcoursup de la session 2022 (jeu de données `fr-esr-parcoursup`, publié par le ministère de l'Enseignement supérieur). Le fichier CSV d'origine est une seule grande table. On la découpe en plusieurs tables liées entre elles. (2) Analyser ces données avec SQL et Python.
 
 ## Modèle de données
 
@@ -28,12 +28,21 @@ Le diagramme de classes UML du modèle :
 | `dico_data_toute_annee.xlsx` | Dictionnaire des données |
 | `proprietes.txt` | Liste des attributs à utiliser dans la base |
 | `ParcourSup_simple.jpg` | Diagramme UML |
+| `analyse/` | Partie 3 : vue SQL, données extraites, script Python d'analyse et graphiques |
 
 ## Analyse statistique (partie 3)
 
-À partir de la base, j'ai extrait les formations des Côtes-d'Armor (vue SQL `vue_sae`), puis analysé les données en Python : moyennes, variances, boîtes à moustaches, nuages de points et régression linéaire multiple. Le modèle explique environ 93 % de la variation du nombre de candidats.
+Une fois la base remplie, on s'en sert pour répondre à une question : **de quoi dépend le nombre de candidats d'une formation ?** J'ai pris les 105 formations des Côtes-d'Armor (département 22).
 
-Tout est dans le dossier [`analyse/`](analyse/), avec son propre [README](analyse/README.md).
+1. **Extraction (SQL)** : la vue `vue_sae` regroupe, pour chaque formation, la capacité d'accueil, le nombre total de candidats, le nombre de candidates et le nombre de candidats par type de bac (général, technologique). Le résultat est exporté dans `ParcoursupCotesArmor.csv`.
+2. **Statistiques de base (Python)** : moyenne, variance et covariance, calculées à la main, puis boîtes à moustaches et nuages de points.
+3. **Régression linéaire multiple** : le nombre de candidats est expliqué par la capacité, le nombre de candidates, le nombre de bacheliers généraux et de bacheliers technologiques. Les matrices sont calculées avec numpy (formule des moindres carrés).
+
+**Résultat** : le modèle explique environ 93 % de la variation du nombre de candidats (R = 0,966).
+
+![Nuage de points : candidats en fonction des candidates](analyse/nuage_points_candidats_en_fonction_candidates.png)
+
+Le détail (variables, formule du modèle, tous les graphiques, mode d'emploi) est dans [`analyse/README.md`](analyse/README.md). Les fichiers sont dans le dossier [`analyse/`](analyse/).
 
 ## Utilisation
 
@@ -47,6 +56,7 @@ Prérequis : PostgreSQL et [SQL Workbench/J](https://www.sql-workbench.eu/) (le 
 - Concevoir un modèle relationnel : clés primaires, clés étrangères, tables d'association.
 - Passer d'un modèle UML à un schéma SQL.
 - Importer un gros fichier CSV dans une table temporaire, puis répartir les données avec des `INSERT ... SELECT DISTINCT`.
+- Extraire des données avec une vue SQL, puis les analyser en Python (statistiques, régression linéaire multiple, graphiques).
 
 ## Auteur
 
